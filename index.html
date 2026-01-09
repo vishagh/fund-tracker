@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financial Fortress v7.0</title>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      [x-cloak] {
+        display: none !important;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 p-2 md:p-10 font-sans text-slate-900"
+    x-data="splitterApp()"
+    x-init="initOPFS()"
+    x-cloak
+  >
+    <div
+      class="max-w-5xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200"
+    >
+      <div
+        class="bg-slate-900 px-6 py-3 flex justify-between items-center text-[10px] font-black tracking-widest text-slate-400"
+      >
+        <div class="flex items-center gap-2">
+          <span
+            class="w-2 h-2 rounded-full"
+            :class="storageStatus.includes('SECURE') ? 'bg-green-500' : 'bg-orange-500'"
+          ></span>
+          <span x-text="storageStatus"></span>
+        </div>
+        <div class="flex gap-4">
+          <button @click="exportData()" class="hover:text-blue-400 transition">
+            EXPORT JSON
+          </button>
+          <button
+            @click="requestNotificationPermission()"
+            x-show="Notification.permission !== 'granted'"
+            class="text-orange-400 hover:text-orange-300 transition underline"
+          >
+            ENABLE ALERTS
+          </button>
+        </div>
+      </div>
+
+      <div class="flex border-b bg-slate-100">
+        <button
+          @click="tab = 'calc'"
+          :class="tab === 'calc' ? 'bg-white border-t-4 border-t-blue-600 font-bold' : 'opacity-50 hover:opacity-100'"
+          class="flex-1 py-4 text-[10px] uppercase tracking-[0.2em] transition-all"
+        >
+          Calculator
+        </button>
+        <button
+          @click="tab = 'history'"
+          :class="tab === 'history' ? 'bg-white border-t-4 border-t-blue-600 font-bold' : 'opacity-50 hover:opacity-100'"
+          class="flex-1 py-4 text-[10px] uppercase tracking-[0.2em] transition-all"
+        >
+          History & Progress
+        </button>
+        <button
+          @click="tab = 'todo'"
+          :class="tab === 'todo' ? 'bg-white border-t-4 border-t-blue-600 font-bold' : 'opacity-50 hover:opacity-100'"
+          class="flex-1 py-4 text-[10px] uppercase tracking-[0.2em] transition-all"
+        >
+          To-Do List
+        </button>
+      </div>
+
+      <div class="p-6 md:p-10">
+        <div
+          x-show="tab === 'calc'"
+          class="space-y-8 animate-in fade-in duration-500"
+        >
+          <div class="flex justify-between items-center">
+            <h2 class="text-2xl font-black tracking-tight text-slate-800">
+              Monthly Surplus Splitter
+            </h2>
+            <button
+              @click="showManageFunds = !showManageFunds"
+              class="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 transition"
+            >
+              <span
+                x-text="showManageFunds ? 'Close Manager' : 'Manage Fund List'"
+              ></span>
+            </button>
+          </div>
+
+          <div
+            x-show="showManageFunds"
+            x-transition
+            class="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-200 space-y-4"
+          >
+            <h3
+              class="text-[10px] font-black text-slate-400 uppercase tracking-widest"
+            >
+              Master Fund Registry
+            </h3>
+            <div class="flex flex-wrap gap-2">
+              <template x-for="(fund, index) in masterFunds" :key="index">
+                <span
+                  class="bg-white border px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm"
+                >
+                  <span x-text="fund"></span>
+                  <button
+                    @click="removeMasterFund(index)"
+                    class="text-slate-300 hover:text-red-500 font-bold"
+                  >
+                    &times;
+                  </button>
+                </span>
+              </template>
+            </div>
+            <div class="flex gap-2">
+              <input
+                x-model="newFundName"
+                @keyup.enter="addMasterFund()"
+                type="text"
+                placeholder="New fund name..."
+                class="flex-1 p-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <button
+                @click="addMasterFund()"
+                class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-3">
+              <label
+                class="text-[10px] font-black text-slate-400 uppercase tracking-widest"
+                >Available Surplus (₹)</label
+              >
+              <div class="relative">
+                <span
+                  class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold"
+                  >₹</span
+                >
+                <input
+                  type="number"
+                  x-model.number="surplus"
+                  class="w-full pl-10 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-2xl font-mono focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+            <div class="flex items-end">
+              <button
+                @click="logInvestment()"
+                class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+              >
+                Log Investment to History
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-4 pt-6">
+            <div class="flex justify-between items-center px-2">
+              <h2
+                class="text-[10px] font-black text-slate-400 uppercase tracking-widest"
+              >
+                Active Distribution Plan
+              </h2>
+              <button
+                @click="addAllocation()"
+                class="text-blue-600 text-[10px] font-black uppercase hover:underline"
+              >
+                + Add Row
+              </button>
+            </div>
+            <template x-for="(alloc, index) in allocations" :key="index">
+              <div
+                class="flex flex-col md:flex-row gap-4 items-center bg-white p-5 rounded-2xl border-2 border-slate-50 group hover:border-blue-100 transition-all"
+              >
+                <select
+                  x-model="alloc.fundName"
+                  @change="saveData()"
+                  class="w-full md:flex-1 p-2 bg-transparent font-bold text-slate-700 outline-none"
+                >
+                  <option value="">Select Fund...</option>
+                  <template x-for="f in masterFunds"
+                    ><option :value="f" x-text="f"></option
+                  ></template>
+                </select>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="number"
+                    x-model.number="alloc.ratio"
+                    @input="saveData()"
+                    class="w-16 p-2 bg-slate-50 rounded-lg text-center font-black text-blue-600"
+                    placeholder="0"
+                  />
+                  <span class="text-slate-300 font-bold">%</span>
+                </div>
+                <div
+                  class="w-full md:w-40 text-right font-mono font-black text-slate-800"
+                >
+                  ₹<span
+                    x-text="formatCurrency((surplus * (alloc.ratio || 0)) / 100)"
+                  ></span>
+                </div>
+                <button
+                  @click="removeAllocation(index)"
+                  class="text-slate-200 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  &times;
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div
+          x-show="tab === 'history'"
+          class="space-y-10 animate-in fade-in duration-500"
+        >
+          <div
+            class="bg-slate-900 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden"
+          >
+            <div class="relative z-10">
+              <div
+                class="flex flex-col md:flex-row justify-between items-end gap-4 mb-6"
+              >
+                <div>
+                  <h3
+                    class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2"
+                  >
+                    Emergency Fund Progress
+                  </h3>
+                  <div class="text-5xl font-black text-white">
+                    ₹<span
+                      x-text="formatCurrency(calculateTotalSaved())"
+                    ></span>
+                  </div>
+                </div>
+                <div class="text-center md:text-right">
+                  <span class="text-[10px] font-black text-slate-500 uppercase"
+                    >Target: ₹6,00,000</span
+                  >
+                  <div
+                    class="text-3xl font-black text-blue-400"
+                    x-text="((calculateTotalSaved() / 230000) * 100).toFixed(1) + '%'"
+                  ></div>
+                </div>
+              </div>
+
+              <div
+                class="w-full bg-slate-800 rounded-full h-5 p-1 border border-slate-700 shadow-inner"
+              >
+                <div
+                  class="bg-gradient-to-r from-blue-600 to-cyan-400 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(37,99,235,0.4)]"
+                  :style="'width: ' + Math.min(100, ((calculateTotalSaved() / 230000) * 100)) + '%'"
+                ></div>
+              </div>
+
+              <div
+                class="mt-6 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500"
+              >
+                <span x-show="calculateTotalSaved() < 230000"
+                  >Remaining: ₹<span
+                    x-text="formatCurrency(230000 - calculateTotalSaved())"
+                  ></span
+                ></span>
+                <span
+                  class="text-green-500"
+                  x-show="calculateTotalSaved() >= 230000"
+                  >✓ Fortress Secured</span
+                >
+                <span x-text="history.length + ' Entries Logged'"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex justify-between items-center px-2">
+              <h2
+                class="text-xs font-black text-slate-400 uppercase tracking-widest"
+              >
+                Transaction Log
+              </h2>
+              <button
+                @click="clearHistory()"
+                class="text-red-500 text-[9px] font-black uppercase hover:underline"
+              >
+                Clear Data
+              </button>
+            </div>
+            <div class="grid gap-3">
+              <template x-for="(entry, index) in history" :key="index">
+                <div
+                  class="flex items-center justify-between bg-white p-5 rounded-2xl border-2 border-slate-50 group hover:border-blue-100 transition-all shadow-sm"
+                >
+                  <div class="flex gap-4 items-center">
+                    <div
+                      class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-black text-xs"
+                      x-text="entry.date.split('/')[0]"
+                    ></div>
+                    <div>
+                      <div
+                        class="text-[9px] font-black text-slate-300 uppercase"
+                        x-text="entry.date"
+                      ></div>
+                      <div class="font-bold text-slate-800">
+                        ₹<span x-text="formatCurrency(entry.total)"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="text-right hidden md:block">
+                    <div
+                      class="text-[10px] text-slate-400 font-medium max-w-xs truncate"
+                      x-text="entry.summary"
+                    ></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div
+          x-show="tab === 'todo'"
+          class="space-y-8 animate-in fade-in duration-500"
+        >
+          <h2 class="text-2xl font-black text-slate-800">Milestone To-Dos</h2>
+
+          <form
+            @submit.prevent="addTodo()"
+            class="bg-slate-900 p-8 rounded-[2rem] space-y-4 shadow-xl"
+          >
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-500 uppercase"
+                  >Task Name</label
+                >
+                <input
+                  type="text"
+                  x-model="todoTitle"
+                  placeholder="e.g. SBI FD Renewal"
+                  class="w-full p-3 rounded-xl bg-slate-800 text-white border-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-500 uppercase"
+                  >Target Date</label
+                >
+                <input
+                  type="date"
+                  x-model="todoDate"
+                  class="w-full p-3 rounded-xl bg-slate-800 text-white border-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              class="w-full bg-blue-600 text-white p-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-500 transition-all"
+            >
+              Add To Timeline
+            </button>
+          </form>
+
+          <div class="space-y-3">
+            <template x-for="(item, index) in todos" :key="index">
+              <div
+                class="flex items-center gap-5 bg-white p-6 rounded-2xl border-2 border-slate-50 hover:border-blue-100 transition-all group"
+              >
+                <input
+                  type="checkbox"
+                  x-model="item.completed"
+                  @change="saveData()"
+                  class="w-6 h-6 rounded-lg border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <div class="flex-1">
+                  <div
+                    class="text-[10px] font-black text-blue-600 uppercase tracking-widest"
+                    x-text="formatDate(item.date)"
+                  ></div>
+                  <div
+                    class="text-base font-bold text-slate-700"
+                    :class="item.completed ? 'line-through opacity-40' : ''"
+                    x-text="item.title"
+                  ></div>
+                </div>
+                <button
+                  @click="removeTodo(index)"
+                  class="text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function splitterApp() {
+        return {
+          tab: "calc",
+          surplus: 0,
+          masterFunds: [
+            "ICICI Savings",
+            "Axis Short Duration",
+            "ICICI BAF",
+            "UTI Nifty 50 Index",
+            "SBI Gold Fund",
+          ],
+          allocations: [
+            { fundName: "ICICI Savings", ratio: 50 },
+            { fundName: "Axis Short Duration", ratio: 30 },
+            { fundName: "ICICI BAF", ratio: 20 },
+          ],
+          history: [],
+          todos: [
+            {
+              title: "SBI FD Maturity (2.02L)",
+              date: "2026-01-14",
+              completed: false,
+            },
+            {
+              title: "Relocation Dec 2026 Milestone",
+              date: "2026-12-31",
+              completed: false,
+            },
+          ],
+          todoTitle: "",
+          todoDate: "",
+          storageStatus: "Initializing...",
+          fileName: "fortress_master_v7.json",
+
+          async initOPFS() {
+            try {
+              const root = await navigator.storage.getDirectory();
+              const fileHandle = await root.getFileHandle(this.fileName, {
+                create: true,
+              });
+              const file = await fileHandle.getFile();
+              const text = await file.text();
+              if (text) {
+                const data = JSON.parse(text);
+                this.surplus = data.surplus || 0;
+                this.allocations = data.allocations || this.allocations;
+                this.history = data.history || [];
+                this.todos = data.todos || this.todos;
+              }
+              this.storageStatus = "STORAGE: SECURE (OPFS)";
+              this.checkReminders();
+            } catch (e) {
+              this.storageStatus = "STORAGE: BROWSER CACHE";
+            }
+          },
+
+          async saveData() {
+            try {
+              const root = await navigator.storage.getDirectory();
+              const fileHandle = await root.getFileHandle(this.fileName, {
+                create: true,
+              });
+              const writable = await fileHandle.createWritable();
+              await writable.write(
+                JSON.stringify({
+                  surplus: this.surplus,
+                  allocations: this.allocations,
+                  history: this.history,
+                  todos: this.todos,
+                })
+              );
+              await writable.close();
+            } catch (e) {
+              console.error("Storage Error:", e);
+            }
+          },
+
+          logInvestment() {
+            if (this.surplus <= 0) {
+              alert("Please enter a surplus amount first.");
+              return;
+            }
+            const summary = this.allocations
+              .filter((a) => a.ratio > 0)
+              .map((a) => `${a.fundName} (${a.ratio}%)`)
+              .join(" | ");
+
+            this.history.unshift({
+              date: new Date().toLocaleDateString("en-IN"),
+              total: this.surplus,
+              summary: summary,
+            });
+            this.saveData();
+            this.tab = "history";
+          },
+
+          calculateTotalSaved() {
+            return this.history.reduce(
+              (sum, entry) => sum + (entry.total || 0),
+              0
+            );
+          },
+
+          addTodo() {
+            this.todos.push({
+              title: this.todoTitle,
+              date: this.todoDate,
+              completed: false,
+            });
+            this.todos.sort((a, b) => new Date(a.date) - new Date(b.date));
+            this.todoTitle = "";
+            this.todoDate = "";
+            this.saveData();
+          },
+
+          checkReminders() {
+            const today = new Date().toISOString().split("T")[0];
+            this.todos.forEach((todo) => {
+              if (
+                todo.date === today &&
+                !todo.completed &&
+                Notification.permission === "granted"
+              ) {
+                new Notification("Fortress Alert", {
+                  body: `Milestone reached: ${todo.title}`,
+                  icon: "https://cdn-icons-png.flaticon.com/512/2933/2933116.png",
+                });
+              }
+            });
+          },
+
+          requestNotificationPermission() {
+            Notification.requestPermission().then(() => this.saveData());
+          },
+
+          exportData() {
+            const data = JSON.stringify(
+              {
+                history: this.history,
+                todos: this.todos,
+                allocations: this.allocations,
+              },
+              null,
+              2
+            );
+            const blob = new Blob([data], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `fortress_backup_${
+              new Date().toISOString().split("T")[0]
+            }.json`;
+            a.click();
+          },
+
+          formatCurrency(v) {
+            return (v || 0).toLocaleString("en-IN", {
+              maximumFractionDigits: 0,
+            });
+          },
+
+          formatDate(d) {
+            return new Date(d).toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            });
+          },
+
+          removeTodo(i) {
+            this.todos.splice(i, 1);
+            this.saveData();
+          },
+          clearHistory() {
+            if (confirm("This will erase all progress. Are you sure?")) {
+              this.history = [];
+              this.saveData();
+            }
+          },
+          // Add these inside your return { ... }
+          showManageFunds: false,
+          newFundName: "",
+
+          addMasterFund() {
+            if (this.newFundName.trim()) {
+              this.masterFunds.push(this.newFundName.trim());
+              this.newFundName = "";
+              this.saveData();
+            }
+          },
+
+          removeMasterFund(index) {
+            if (confirm("Remove this fund from the registry?")) {
+              this.masterFunds.splice(index, 1);
+              this.saveData();
+            }
+          },
+
+          addAllocation() {
+            this.allocations.push({ fundName: "", ratio: 0 });
+            this.saveData();
+          },
+
+          removeAllocation(index) {
+            this.allocations.splice(index, 1);
+            this.saveData();
+          },
+        };
+      }
+    </script>
+  </body>
+</html>
