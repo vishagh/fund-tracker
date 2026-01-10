@@ -317,7 +317,6 @@
 
             // ... rest of existing logic ...
 
-            this.storageStatus = this.isPersistentStatus ? 'STORAGE: PROTECTED' : 'STORAGE: TEMPORARY';
 
             const file = await fileHandle.getFile();
             const text = await file.text();
@@ -329,7 +328,7 @@
               this.todos = data.todos || this.todos;
             }
 
-            this.storageStatus = "STORAGE: SECURE (OPFS)";
+            this.storageStatus = this.isPersistentStatus ? 'STORAGE: PROTECTED' : 'STORAGE: TEMPORARY';
             this.checkReminders();
           } catch (e) {
             this.storageStatus = "STORAGE: BROWSER CACHE";
